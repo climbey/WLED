@@ -522,6 +522,27 @@ void WLED::setup()
   }
   DEBUG_PRINTLN(F("Reading config"));
   bool needsCfgSave = deserializeConfigFromFS();
+  // AI: XIAO ESP32-S3 Plus project defaults (fresh install only). The fixture is a
+  //     32x8 WS2812B matrix; data enters top-left and runs serpentine through the
+  //     columns (down column 1, up column 2, ...), see PROJECT_STATUS.md. Stock WLED
+  //     fresh-install default is a plain PIXEL_COUNTS strip with no 2D geometry, so
+  //     apply the panel here when no saved configuration exists yet: this yields an
+  //     identity mapping between the visual grid and the physical layout (verified
+  //     against the setUpMatrix() ledmap algorithm). Changeable at any time via UI
+  //     (Settings > Matrix); once /cfg.json has been written, this block never runs
+  //     again for that installation.
+#ifndef WLED_DISABLE_2D
+  if (!WLED_FS.exists("/cfg.json")) {
+    strip.isMatrix = true;
+    WS2812FX::Panel pnl;
+    pnl.width = 32;   // 32 columns
+    pnl.height = 8;   // 8 rows
+    pnl.vertical = true;     // data runs down/up through the columns (not along rows)
+    pnl.serpentine = true;   // column 1 top->bottom, column 2 bottom->top, ...
+    strip.panel.push_back(pnl);
+    DEBUG_PRINTLN(F("AI: applying XIAO S3 Plus project matrix defaults (32x8 vertical serpentine)"));
+  }
+#endif
   DEBUG_PRINTF_P(PSTR("heap %u\n"), getFreeHeapSize());
 
 #if defined(STATUSLED) && STATUSLED>=0
