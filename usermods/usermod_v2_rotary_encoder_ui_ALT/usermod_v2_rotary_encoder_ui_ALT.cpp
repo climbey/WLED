@@ -47,6 +47,14 @@
 #define ENCODER_SW_PIN 19
 #endif
 
+// AI: XIAO ESP32-S3 Plus project (Chris, 2026-08-25): physical clockwise rotation reads as
+// counter-clockwise in this state machine with our proto-board wiring, so invert the direction
+// decision to make clockwise = increase/next (natural knob behaviour). Revert with
+// -D ENCODER_INVERT_DIRECTION=0 if the DT/CLK wires are ever swapped.
+#ifndef ENCODER_INVERT_DIRECTION
+#define ENCODER_INVERT_DIRECTION 1
+#endif
+
 #ifndef ENCODER_MAX_DELAY_MS    // max delay between polling encoder pins
 #define ENCODER_MAX_DELAY_MS 8  // 8 milliseconds => max 120 change impulses in 1 second, for full turn of a 30/30 encoder (4 changes per segment, 30 segments for one turn)
 #endif
@@ -638,7 +646,11 @@ void RotaryEncoderUIUsermod::loop()
     }
 
     Enc_A = readPin(pinA); // Read encoder pins
+#if ENCODER_INVERT_DIRECTION
+    Enc_B = !readPin(pinB);  // AI: invert for this project's wiring (see ENCODER_INVERT_DIRECTION above)
+#else
     Enc_B = readPin(pinB);
+#endif
     if ((Enc_A) && (!Enc_A_prev))
     { // A has gone from high to low
       if (Enc_B == LOW)    //changes to LOW so that then encoder registers a change at the very end of a pulse
